@@ -18,9 +18,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-################### check_mssql_database.py ##############################
-# Version    : 1.0.0
-# Date       : 21/06/2022
+################### check_mssql_server.py ##############################
+# Version    : 2.1.1
+# Date       : 03/12/2019
 # Maintainer : Nagios Enterprises, LLC
 # License    : GPLv2 (LICENSE.md / https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 ########################################################################
@@ -35,113 +35,245 @@ except:
     import pickle
 from optparse import OptionParser, OptionGroup
 
-BASE_QUERY = "SELECT cntr_value FROM master.dbo.database_monitoring WHERE counter_name='%s' AND instance_name='%%s';"
-DIVI_QUERY = "SELECT cntr_value FROM master.dbo.database_monitoring WHERE counter_name LIKE '%s%%%%' AND instance_name='%%s';"
-#BASE_QUERY = "SELECT cntr_value FROM sys.sysperfinfo WHERE counter_name='%s' AND instance_name='%%s';"
-#DIVI_QUERY = "SELECT cntr_value FROM sys.sysperfinfo WHERE counter_name LIKE '%s%%%%' AND instance_name='%%s';"
+BASE_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name='%s' AND instance_name='';"
+INST_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name='%s' AND instance_name='%s';"
+OBJE_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name='%s';"
+DIVI_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name LIKE '%s%%' AND instance_name='%s';"
+CON_QUERY = "SELECT count(*) FROM sys.sysprocesses;"
+CPU_QUERY = "SELECT "+\
+    "record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [CPU] "+\
+    "FROM ( "+\
+        "SELECT[timestamp], CONVERT(XML, record) AS [record] "+\
+            "FROM sys.dm_os_ring_buffers WITH ( NOLOCK ) "+\
+            "WHERE ring_buffer_type=N'RING_BUFFER_SCHEDULER_MONITOR' "+\
+            "AND record LIKE N'%<SystemHealth>%'"+\
+    ") as x;"
 
 MODES = {
-    
-#    'logcachehit'       : { 'help'      : 'Log Cache Hit Ratio',
-#                            'stdout'    : 'Log Cache Hit Ratio is %s%%',
-#                            'label'     : 'log_cache_hit_ratio',
-#                            'unit'      : '%',
-#                            'query'     : DIVI_QUERY % 'Log Cache Hit Ratio',
-#                            'type'      : 'divide',
-#                            'modifier'  : 100
-#                            },
-#    
-#    'activetrans'       : { 'help'      : 'Active Transactions',
-#                            'stdout'    : 'Active Transactions is %s',
-#                            'label'     : 'log_file_usage',
-#                            'unit'      : '',
-#                            'query'     : BASE_QUERY % 'Active Transactions',
-#                            'type'      : 'standard'
-#                            },
-#    
-#    'logflushes'         : { 'help'     : 'Log Flushes Per Second',
-#                            'stdout'    : 'Log Flushes Per Second is %s/sec',
-#                            'label'     : 'log_flushes_per_sec',
-#                            'query'     : BASE_QUERY % 'Log Flushes/sec',
-#                            'type'      : 'delta'
-#                            },
-   
-    'logfileusage'      : { 'help'      : 'Log File Usage',
-                            'stdout'    : 'Log File Usage is %s%%',
-                            'label'     : 'log_file_usage',
+
+    'connections'       : { 'help'      : 'Number of open connections',
+                            'stdout'    : 'Number of open connections is %s',
+                            'label'     : 'connections',
+                            'type'      : 'standard',
+                            'query'     : CON_QUERY 
+                            },
+
+    'memory'            : { 'help'      : 'Used server memory',
+                            'stdout'    : 'Server using %s%% of memory',
+                            'label'     : 'memory',
+			    'unit'	: '%',
+			    'type'	: 'standard',
+                            'query'     : BASE_QUERY % 'Memory Usage'
+                            },
+
+    'memorygrants'     : { 'help'      : 'Memory Grants Pending',
+                           'stdout'    : '%s Of Memory Grants Pending',
+                           'label'     : 'memory_grants_pending',
+                           'query'     : BASE_QUERY % 'Memory Grants Pending',
+                           'type'      : 'standard'
+                           },
+
+    'freeliststalls'   : { 'help'      : 'Free List Stalls / Sec ',
+                           'stdout'    : 'Free List Stalls / Sec is %s/sec',
+                           'label'     : 'free_list_stalls',
+                           'query'     : BASE_QUERY % 'Free list stalls/sec',
+                           'type'      : 'delta'
+                           },
+
+    'cpu'               : { 'help'      : 'Server CPU utilization',
+                            'stdout'    : 'Current CPU utilization is %s%%',
+                            'label'     : 'cpu',
+			    'unit'	: '%',	
+                            'query'     : CPU_QUERY
+                            },
+
+    'bufferhitratio'    : { 'help'      : 'Buffer Cache Hit Ratio',
+                            'stdout'    : 'Buffer Cache Hit Ratio is %s%%',
+                            'label'     : 'buffer_cache_hit_ratio',
                             'unit'      : '%',
-                            'query'     : BASE_QUERY % 'Percent Log Used',
-                            'type'      : 'standard'
+                            'query'     : DIVI_QUERY % ('Buffer cache hit ratio', ''),
+                            'type'      : 'divide',
+                            'modifier'  : 100,
                             },
     
-    'transpsec'         : { 'help'      : 'Transactions Per Second',
-                            'stdout'    : 'Transactions Per Second is %s/sec',
-                            'label'     : 'transactions_per_sec',
-                            'query'     : BASE_QUERY % 'Transactions/sec',
+    #~ 'pagelooks'         : { 'help'      : 'Page Lookups Per Second',
+                            #~ 'stdout'    : 'Page Lookups Per Second is %s',
+                            #~ 'label'     : 'page_lookups',
+                            #~ 'query'     : BASE_QUERY % 'Page lookups/sec',
+                            #~ 'type'      : 'delta'
+                            #~ },
+    
+    #~ 'freepages'         : { 'help'      : 'Free Pages (Cumulative)',
+                            #~ 'stdout'    : 'Free pages is %s',
+                            #~ 'label'     : 'free_pages',
+                            #~ 'type'      : 'standard',
+                            #~ 'query'     : BASE_QUERY % 'Free pages'
+                            #~ },
+                            
+    #~ 'totalpages'        : { 'help'      : 'Total Pages (Cumulative)',
+                            #~ 'stdout'    : 'Total pages is %s',
+                            #~ 'label'     : 'totalpages',
+                            #~ 'type'      : 'standard',
+                            #~ 'query'     : BASE_QUERY % 'Total pages',
+                            #~ },
+                            
+    #~ 'targetpages'       : { 'help'      : 'Target Pages',
+                            #~ 'stdout'    : 'Target pages are %s',
+                            #~ 'label'     : 'target_pages',
+                            #~ 'type'      : 'standard',
+                            #~ 'query'     : BASE_QUERY % 'Target pages',
+                            #~ },
+                            
+    #~ 'databasepages'     : { 'help'      : 'Database Pages',
+                            #~ 'stdout'    : 'Database pages are %s',
+                            #~ 'label'     : 'database_pages',
+                            #~ 'type'      : 'standard',
+                            #~ 'query'     : BASE_QUERY % 'Database pages',
+                            #~ },
+    
+    #~ 'stolenpages'       : { 'help'      : 'Stolen Pages',
+                            #~ 'stdout'    : 'Stolen pages are %s',
+                            #~ 'label'     : 'stolen_pages',
+                            #~ 'type'      : 'standard',
+                            #~ 'query'     : BASE_QUERY % 'Stolen pages',
+                            #~ },
+    
+    'lazywrites'        : { 'help'      : 'Lazy Writes / Sec',
+                            'stdout'    : 'Lazy Writes / Sec is %s/sec',
+                            'label'     : 'lazy_writes',
+                            'query'     : BASE_QUERY % 'Lazy writes/sec',
                             'type'      : 'delta'
                             },
     
-#    'loggrowths'        : { 'help'      : 'Log Growths',
-#                            'stdout'    : 'Log Growths is %s',
-#                            'label'     : 'log_growths',
-#                            'query'     : BASE_QUERY % 'Log Growths',
-#                            'type'      : 'standard'
-#                            },
-#    
-#    'logshrinks'        : { 'help'      : 'Log Shrinks',
-#                            'stdout'    : 'Log Shrinks is %s',
-#                            'label'     : 'log_shrinks',
-#                            'query'     : BASE_QUERY % 'Log Shrinks',
-#                            'type'      : 'standard'
-#                            },
-#    
-#    'logtruncs'         : { 'help'      : 'Log Truncations',
-#                            'stdout'    : 'Log Truncations is %s',
-#                            'label'     : 'log_truncations',
-#                            'query'     : BASE_QUERY % 'Log Truncations',
-#                            'type'      : 'standard'
-#                            },
-#    
-#    'logwait'           : { 'help'      : 'Log Flush Wait Time',
-#                            'stdout'    : 'Log Flush Wait Time is %sms',
-#                            'label'     : 'log_wait_time',
-#                            'unit'      : 'ms',
-#                            'query'     : BASE_QUERY % 'Log Flush Wait Time',
-#                            'type'      : 'standard'
-#                            },
+    #~ 'readahead'         : { 'help'      : 'Readahead Pages / Sec',
+                            #~ 'stdout'    : 'Readahead Pages / Sec is %s/sec',
+                            #~ 'label'     : 'readaheads',
+                            #~ 'query'     : BASE_QUERY % 'Readahead pages/sec',
+                            #~ 'type'      : 'delta',
+                            #~ },
+                            
     
-    'datasize'          : { 'help'      : 'Database Size',
-                            'stdout'    : 'Database size is %sKB',
-                            'label'     : 'database_size',
-                            'query'     : BASE_QUERY % 'Data File(s) Size (KB)',
-                            'type'      : 'standard'
+    #~ 'pagereads'         : { 'help'      : 'Page Reads / Sec',
+                            #~ 'stdout'    : 'Page Reads / Sec is %s/sec',
+                            #~ 'label'     : 'page_reads',
+                            #~ 'query'     : BASE_QUERY % 'Page reads/sec',
+                            #~ 'type'      : 'delta'
+                            #~ },
+    
+    #~ 'checkpoints'       : { 'help'      : 'Checkpoint Pages / Sec',
+                            #~ 'stdout'    : 'Checkpoint Pages / Sec is %s/sec',
+                            #~ 'label'     : 'checkpoint_pages',
+                            #~ 'query'     : BASE_QUERY % 'Checkpoint pages/Sec',
+                            #~ 'type'      : 'delta'
+                            #~ },
+                            
+    
+    #~ 'pagewrites'        : { 'help'      : 'Page Writes / Sec',
+                            #~ 'stdout'    : 'Page Writes / Sec is %s/sec',
+                            #~ 'label'     : 'page_writes',
+                            #~ 'query'     : BASE_QUERY % 'Page writes/sec',
+                            #~ 'type'      : 'delta',
+                            #~ },
+    
+    #~ 'lockrequests'      : { 'help'      : 'Lock Requests / Sec',
+                            #~ 'stdout'    : 'Lock Requests / Sec is %s/sec',
+                            #~ 'label'     : 'lock_requests',
+                            #~ 'query'     : INST_QUERY % ('Lock requests/sec', '_Total'),
+                            #~ 'type'      : 'delta',
+                            #~ },
+    
+    #~ 'locktimeouts'      : { 'help'      : 'Lock Timeouts / Sec',
+                            #~ 'stdout'    : 'Lock Timeouts / Sec is %s/sec',
+                            #~ 'label'     : 'lock_timeouts',
+                            #~ 'query'     : INST_QUERY % ('Lock timeouts/sec', '_Total'),
+                            #~ 'type'      : 'delta',
+                            #~ },
+    
+    'deadlocks'         : { 'help'      : 'Deadlocks / Sec',
+                            'stdout'    : 'Deadlocks / Sec is %s/sec',
+                            'label'     : 'deadlocks',
+                            'query'     : INST_QUERY % ('Number of Deadlocks/sec', '_Total'),
+                            'type'      : 'delta',
                             },
-
-    'datamaxsize'       : { 'help'      : 'Database Maximum Size',
-                            'stdout'    : 'Database maximum size is %sKB',
-                            'label'     : 'database_max_size',
-                            'query'     : BASE_QUERY % 'Data File(s) Max Size (KB)',
-                            'type'      : 'standard'
+    
+    'lockwaits'         : { 'help'      : 'Lockwaits / Sec',
+                            'stdout'    : 'Lockwaits / Sec is %s/sec',
+                            'label'     : 'lockwaits',
+                            'query'     : INST_QUERY % ('Lock Waits/sec', '_Total'),
+                            'type'      : 'delta',
                             },
- 
-    'logsize'           : { 'help'      : 'Log Size',
-                            'stdout'    : 'Log size is %sKB',
-                            'label'     : 'log_size',
-                            'query'     : BASE_QUERY % 'Log File(s) Size (KB)',
-                            'type'      : 'standard'
+    
+    'lockwait'          : { 'help'      : 'Lock Wait Time (ms)',
+                            'stdout'    : 'Lock Wait Time (ms) is %sms',
+                            'label'     : 'lockwait',
+                            'unit'      : 'ms',
+                            'query'     : INST_QUERY % ('Lock Wait Time (ms)', '_Total'),
+                            'type'      : 'standard',
                             },
-
-   'datafileusage'      : { 'help'      : 'Data File Usage',
-                            'stdout'    : 'Data File Usage is %s%%',
-                            'label'     : 'data_file_usage',
+    
+    'averagewait'       : { 'help'      : 'Average Wait Time (ms)',
+                            'stdout'    : 'Average Wait Time (ms) is %sms',
+                            'label'     : 'averagewait',
+                            'unit'      : 'ms',
+                            'query'     : DIVI_QUERY % ('Average Wait Time', '_Total'),
+                            'type'      : 'divide',
+                            },
+    
+    'pagesplits'        : { 'help'      : 'Page Splits / Sec',
+                            'stdout'    : 'Page Splits / Sec is %s/sec',
+                            'label'     : 'page_splits',
+                            'query'     : OBJE_QUERY % 'Page Splits/sec',
+                            'type'      : 'delta',
+                            },
+    
+    'cachehit'          : { 'help'      : 'Cache Hit Ratio',
+                            'stdout'    : 'Cache Hit Ratio is %s%%',
+                            'label'     : 'cache_hit_ratio',
+                            'query'     : DIVI_QUERY % ('Cache Hit Ratio', '_Total'),
+                            'type'      : 'divide',
                             'unit'      : '%',
-                            'query'     : BASE_QUERY % 'Percent File Used',
+                            'modifier'  : 100,
+                            },
+    
+    'batchreq'          : { 'help'      : 'Batch Requests / Sec',
+                            'stdout'    : 'Batch Requests / Sec is %s/sec',
+                            'label'     : 'batch_requests',
+                            'query'     : OBJE_QUERY % 'Batch Requests/sec',
+                            'type'      : 'delta',
+                            },
+    
+    'sqlcompilations'   : { 'help'      : 'SQL Compilations / Sec',
+                            'stdout'    : 'SQL Compilations / Sec is %s/sec',
+                            'label'     : 'sql_compilations',
+                            'query'     : OBJE_QUERY % 'SQL Compilations/sec',
+                            'type'      : 'delta',
+                            },
+    
+    'fullscans'         : { 'help'      : 'Full Scans / Sec',
+                            'stdout'    : 'Full Scans / Sec is %s/sec',
+                            'label'     : 'full_scans',
+                            'query'     : OBJE_QUERY % 'Full Scans/sec',
+                            'type'      : 'standard',
+                            },
+    
+    'pagelife'          : { 'help'      : 'Page Life Expectancy',
+                            'stdout'    : 'Page Life Expectancy is %s/sec',
+                            'label'     : 'page_life_expectancy',
+                            'query'     : OBJE_QUERY % 'Page life expectancy',
                             'type'      : 'standard'
                             },
-
+    
+    #~ 'debug'             : { 'help'      : 'Used as a debugging tool.',
+                            #~ 'stdout'    : 'Debugging: ',
+                            #~ 'label'     : 'debug',
+                            #~ 'query'     : DIVI_QUERY % ('Average Wait Time', '_Total'),
+                            #~ 'type'      : 'divide' 
+                            #~ },
+    
     'time2connect'      : { 'help'      : 'Time to connect to the database.' },
     
     'test'              : { 'help'      : 'Run tests of all queries against the database.' },
+
 }
 
 def return_nagios(options, stdout='', result='', unit='', label=''):
@@ -171,7 +303,7 @@ class NagiosReturn(Exception):
 class MSSQLQuery(object):
     
     def __init__(self, query, options, label='', unit='', stdout='', host='', modifier=1, *args, **kwargs):
-        self.query = query % options.database
+        self.query = query
         self.label = label
         self.unit = unit
         self.stdout = stdout
@@ -206,7 +338,7 @@ class MSSQLDivideQuery(MSSQLQuery):
     
     def calculate_result(self):
         if self.query_result[1] != 0:
-            self.result = (float(self.query_result[0]) / self.query_result[1]) * self.modifier
+            self.result = round((float(self.query_result[0]) / self.query_result[1]) * self.modifier,2)
         else:
             self.result = float(self.query_result[0]) * self.modifier
     
@@ -219,7 +351,7 @@ class MSSQLDeltaQuery(MSSQLQuery):
     
     def make_pickle_name(self):
         tmpdir = tempfile.gettempdir()
-        tmpname = hash(self.host + self.options.database + self.query)
+        tmpname = hash(self.host + self.query)
         self.picklename = '%s/mssql-%s.tmp' % (tmpdir, tmpname)
     
     def calculate_result(self):
@@ -256,14 +388,13 @@ class MSSQLDeltaQuery(MSSQLQuery):
         tmpfile.close()
 
 def parse_args():
-    usage = "usage: %prog -H hostname -U user -P password -D database --mode"
+    usage = "usage: %prog -H hostname -U user -P password --mode"
     parser = OptionParser(usage=usage)
     
     required = OptionGroup(parser, "Required Options")
     required.add_option('-H' , '--hostname', help='Specify MSSQL Server Address', default=None)
     required.add_option('-U' , '--user', help='Specify MSSQL User Name', default=None)
     required.add_option('-P' , '--password', help='Specify MSSQL Password', default=None)
-    required.add_option('-D', '--database', help='Specify the database instance to check (default=master)', default='master') 
     parser.add_option_group(required)
     
     connection = OptionGroup(parser, "Optional Connection Information")
@@ -289,8 +420,6 @@ def parse_args():
         parser.error('User is a required option.')
     if not options.password:
         parser.error('Password is a required option.')
-    if not options.database:
-        parser.error('Table is a required option.')
     
     if options.instance and options.port:
         parser.error('Cannot specify both instance and port.')
@@ -398,5 +527,5 @@ if __name__ == '__main__':
         sys.exit(e.code)
     except Exception as e:
         print(type(e))
-        print("Caught unexpected error. This could be caused by the database_monitoring view not containing the proper entries for this query.")
+        print("Caught unexpected error. This could be caused by your sysperfinfo not containing the proper entries for this query, and you may delete this service check.")
         sys.exit(3)
