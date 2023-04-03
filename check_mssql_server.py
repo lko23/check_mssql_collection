@@ -276,8 +276,12 @@ MODES = {
 
 }
 
+# handle None result as unknown
 def return_nagios(options, stdout='', result='', unit='', label=''):
-    if is_within_range(options.critical, result):
+    if result is None:
+        prefix = 'UNKNOWN: '
+        code = 3
+    elif is_within_range(options.critical, result):
         prefix = 'CRITICAL: '
         code = 2
     elif is_within_range(options.warning, result):
