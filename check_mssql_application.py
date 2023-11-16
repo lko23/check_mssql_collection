@@ -23,6 +23,8 @@
 # Date       : 03/12/2019
 # Maintainer : Nagios Enterprises, LLC
 # License    : GPLv2 (LICENSE.md / https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+# Rewrite    : from check_mssql_server.py
+# Author     : lko
 ########################################################################
 
 import pymssql
