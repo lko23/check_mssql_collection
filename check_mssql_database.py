@@ -23,20 +23,25 @@
 # Date       : 21/06/2022
 # Maintainer : Nagios Enterprises, LLC
 # License    : GPLv2 (LICENSE.md / https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+# Rewrite    : from check_mssql_server.py
+# Author     : lko
 ########################################################################
 
 import pymssql
 import time
 import sys
 import tempfile
-try:
-    import cPickle as pickle
-except:
-    import pickle
+#try:
+#    import cPickle as pickle
+#except:
+#    import pickle
 from optparse import OptionParser, OptionGroup
 
+# Change from sys.sysperfinfo to Custom View
 BASE_QUERY = "SELECT cntr_value FROM master.dbo.database_monitoring WHERE counter_name='%s' AND instance_name='%%s';"
 DIVI_QUERY = "SELECT cntr_value FROM master.dbo.database_monitoring WHERE counter_name LIKE '%s%%%%' AND instance_name='%%s';"
+#BASE_QUERY = "SELECT cntr_value FROM sys.sysperfinfo WHERE counter_name='%s' AND instance_name='%%s';"
+#DIVI_QUERY = "SELECT cntr_value FROM sys.sysperfinfo WHERE counter_name LIKE '%s%%%%' AND instance_name='%%s';"
 
 MODES = {
     
@@ -218,44 +223,72 @@ class MSSQLDivideQuery(MSSQLQuery):
         self.query_result = [x[0] for x in cur.fetchall()]
 
 class MSSQLDeltaQuery(MSSQLQuery):
+
+# remove pickle and write time and value to simple to line file
     
-    def make_pickle_name(self):
-        tmpdir = tempfile.gettempdir()
-        tmpname = hash(self.host + self.options.database + self.query)
-        self.picklename = '%s/mssql-%s.tmp' % (tmpdir, tmpname)
+    def make_name(self):
+        #tmpdir = tempfile.gettempdir()
+        #tmpname = hash(self.host + self.options.database + self.query)
+        #self.picklename = '%s/mssql-%s.tmp' % (tmpdir, tmpname)
+        tmpdir = '/var/tmp'
+        self.name = '%s/check_mssql_database-%s-%s-%s.tmp' % (tmpdir, self.host, self.options.database, self.options.mode)
     
     def calculate_result(self):
-        self.make_pickle_name()
+        self.make_name()
         
+        #try:
+        #    tmpfile = open(self.picklename)
+        #except IOError:
+        #    tmpfile = open(self.picklename, 'w')
+        #    tmpfile.close()
+        #    tmpfile = open(self.picklename)
+        #try:
+        #    try:
+        #        last_run = pickle.load(tmpfile)
+        #    except EOFError as ValueError:
+        #        last_run = { 'time' : None, 'value' : None }
+        #finally:
+        #    tmpfile.close()
+        #
+        #if last_run['time']:
+        #    old_time = last_run['time']
+        #    new_time = time.time()
+        #    old_val  = last_run['query_result']
+        #    new_val  = self.query_result
+        #    self.result = ((new_val - old_val) / (new_time - old_time)) * self.modifier
+        #else:
+        #    self.result = None
+        #
+        #new_run = { 'time' : time.time(), 'query_result' : self.query_result }
+        #
+        ##~ Will throw IOError, leaving it to acquiesce
+        #tmpfile = open(self.picklename, 'w')
+        #pickle.dump(new_run, tmpfile)
+        #tmpfile.close()
+
         try:
-            tmpfile = open(self.picklename)
+            with open(self.name, 'r') as tmpfile:
+                last_time = float(tmpfile.readline())
+                last_query_result = float(tmpfile.readline())
+                ##print(last_time)
+                #print(type(last_time))
+                #print(last_query_result)
+                #print(type(last_query_result))
         except IOError:
-            tmpfile = open(self.picklename, 'w')
-            tmpfile.close()
-            tmpfile = open(self.picklename)
-        try:
-            try:
-                last_run = pickle.load(tmpfile)
-            except EOFError as ValueError:
-                last_run = { 'time' : None, 'value' : None }
-        finally:
-            tmpfile.close()
-        
-        if last_run['time']:
-            old_time = last_run['time']
+           last_time = None
+           last_query_result = None
+
+        if last_time:
+            old_time = last_time
             new_time = time.time()
-            old_val  = last_run['query_result']
+            old_val  = last_query_result
             new_val  = self.query_result
             self.result = ((new_val - old_val) / (new_time - old_time)) * self.modifier
         else:
             self.result = None
-        
-        new_run = { 'time' : time.time(), 'query_result' : self.query_result }
-        
-        #~ Will throw IOError, leaving it to acquiesce
-        tmpfile = open(self.picklename, 'w')
-        pickle.dump(new_run, tmpfile)
-        tmpfile.close()
+
+        with open(self.name, 'w+') as tmpfile:
+            tmpfile.writelines([str(time.time()), "\n", str(self.query_result)])
 
 def parse_args():
     usage = "usage: %prog -H hostname -U user -P password -D database --mode"
