@@ -39,8 +39,7 @@ from optparse import OptionParser, OptionGroup
 
 #Change from sys.sysperfinfo to Custom View
 #BASE_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name='%s' AND instance_name='';"
-MIRTH_QUERY = "SELECT cntr_value FROM master.dbo.application_monitoring WHERE counter_name='%s';"
-WINSCRIBE_QUERY = "SELECT COUNT(*) FROM [WinScribe].[dbo].[trans] WHERE T_LOGGEDON=1;"
+BASE_QUERY = "SELECT cntr_value FROM master.dbo.application_monitoring WHERE counter_name='%s';"
 #INST_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name='%s' AND instance_name='%s';"
 #OBJE_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name='%s';"
 #DIVI_QUERY = "SELECT cntr_value FROM master.dbo.server_monitoring WHERE counter_name LIKE '%s%%' AND instance_name='%s';"
@@ -60,293 +59,56 @@ MODES = {
                             'stdout'    : 'Number of License is %s',
                             'label'     : 'license',
                             'type'      : 'standard',
-                            'query'     : WINSCRIBE_QUERY 
+                            'query'     : BASE_QUERY % 'license',
                             },
 
-#    'mirth_size'         : { 'help'      : 'Mirth Table Size Test Number',
-#                            'stdout'    : 'Table Size',
-#                            'label'     : 'test',
-#                            'unit'      : 'na',
-#                            'query'     : MIRTH_QUERY % 'mirth_size',
-#                            'type'      : 'standard',
-#                            },
-
-    'mirth_size_tst'    : { 'help'      : 'Mirth Table Size',
+    'app_size_prd' : { 'help'      : 'App Prd Table Size',
                             'stdout'    : 'Table Size',
-                            'label'     : 'mirth_size_tst',
+                            'label'     : 'app_size_prd_a',
                             'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_tst',
+                            'query'     : BASE_QUERY % 'app_size_prd',
                             'type'      : 'standard',
                             },
 
-    'mirth_size_dev'    : { 'help'      : 'Mirth Table Size',
+    'app_size_tst'    : { 'help'      : 'App Tst Table Size',
                             'stdout'    : 'Table Size',
-                            'label'     : 'mirth_size_dev',
+                            'label'     : 'app_size_tst',
                             'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_dev',
+                            'query'     : BASE_QUERY % 'app_size_tst',
+                            'type'      : 'standard',
+                            },
+
+    'app_size_dev'    : { 'help'      : 'App Dev Table Size',
+                            'stdout'    : 'Table Size',
+                            'label'     : 'app_size_dev',
+                            'unit'      : 'MB',
+                            'query'     : BASE_QUERY % 'app_size_dev',
                             'type'      : 'standard',
                               },
-
-    'mirth_size_prd_a' : { 'help'      : 'Mirth Table Size',
-                            'stdout'    : 'Table Size',
-                            'label'     : 'mirth_size_prd_a',
+    
+    'app_size_growth_prd' : { 'help'      : 'App Prd Table Size Growth',
+                            'stdout'    : 'Largest Table Size Growth is %s%%',
+                            'label'     : 'app_size_growth_prd_a',
                             'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_prd_a',
+                            'query'     : BASE_QUERY % 'app_size_growth_prd_a',
+                            'type'      : 'standard',
+                            },
+    'app_size_growth_tst'    : { 'help'      : 'App Tst Table Size Growth',
+                            'stdout'    : 'Largest Table Size Growth is %s%%',
+                            'label'     : 'app_size_growth_tst',
+                            'unit'      : 'MB',
+                            'query'     : BASE_QUERY % 'app_size_growth_tst',
                             'type'      : 'standard',
                             },
 
-    'mirth_size_prd_b' : { 'help'      : 'Mirth Table Size',
-                            'stdout'    : 'Table Size',
-                            'label'     : 'mirth_size_prd_b',
+    'app_size_growth_dev'    : { 'help'      : 'App Dev Table Size Growth',
+                            'stdout'    : 'Largest Table Size Growth is %s%%',
+                            'label'     : 'app_size_growth_dev',
                             'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_prd_b',
+                            'query'     : BASE_QUERY % 'app_size_growth_dev',
                             'type'      : 'standard',
                               },
-
-    'mirth_size_growth_tst'    : { 'help'      : 'Mirth Table Size Growth',
-                            'stdout'    : 'Largest Table Size Growth is %s%%',
-                            'label'     : 'mirth_size_growth_tst',
-                            'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_growth_tst',
-                            'type'      : 'standard',
-                            },
-
-    'mirth_size_growth_dev'    : { 'help'      : 'Mirth Table Size Growth',
-                            'stdout'    : 'Largest Table Size Growth is %s%%',
-                            'label'     : 'mirth_size_growth_dev',
-                            'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_growth_dev',
-                            'type'      : 'standard',
-                              },
-
-    'mirth_size_growth_prd_a' : { 'help'      : 'Mirth Table Size Growth',
-                            'stdout'    : 'Largest Table Size Growth is %s%%',
-                            'label'     : 'mirth_size_growth_prd_a',
-                            'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_growth_prd_a',
-                            'type'      : 'standard',
-                            },
-
-    'mirth_size_growth_prd_b' : { 'help'      : 'Mirth Table Size Growth',
-                            'stdout'    : 'Largest Table Size Growth is %s%%',
-                            'label'     : 'mirth_size_growth_prd_b',
-                            'unit'      : 'MB',
-                            'query'     : MIRTH_QUERY % 'mirth_size_growth_prd_b',
-                            'type'      : 'standard',
-                              },
-
-#    'memory'            : { 'help'      : 'Used server memory',
-                            #'stdout'    : 'Server using %s%% of memory',
-                            #'label'     : 'memory',
-            			    #'unit'	: '%',
-            			    #'type'	: 'standard',
-                            #'query'     : BASE_QUERY % 'Memory Usage'
-                            #},
-
-#    'memorygrants'     : { 'help'      : 'Memory Grants Pending',
-#                           'stdout'    : '%s Of Memory Grants Pending',
-#                           'label'     : 'memory_grants_pending',
-#                           'query'     : BASE_QUERY % 'Memory Grants Pending',
-#                           'type'      : 'standard'
-#                           },
-
-#    'freeliststalls'   : { 'help'      : 'Free List Stalls / Sec ',
-#                           'stdout'    : 'Free List Stalls / Sec is %s/sec',
-#                           'label'     : 'free_list_stalls',
-#                           'query'     : BASE_QUERY % 'Free list stalls/sec',
-#                           'type'      : 'delta'
-#                           },
-
-#    'cpu'               : { 'help'      : 'Server CPU utilization',
-#                            'stdout'    : 'Current CPU utilization is %s%%',
-#                            'label'     : 'cpu',
-#			    'unit'	: '%',	
-#                            'query'     : CPU_QUERY
-#                            },
-
-#    'bufferhitratio'    : { 'help'      : 'Buffer Cache Hit Ratio',
-#                            'stdout'    : 'Buffer Cache Hit Ratio is %s%%',
-#                            'label'     : 'buffer_cache_hit_ratio',
-#                            'unit'      : '%',
-#                            'query'     : DIVI_QUERY % ('Buffer cache hit ratio', ''),
-#                            'type'      : 'divide',
-#                            'modifier'  : 100,
-#                            },
-    
-    #~ 'pagelooks'         : { 'help'      : 'Page Lookups Per Second',
-                            #~ 'stdout'    : 'Page Lookups Per Second is %s',
-                            #~ 'label'     : 'page_lookups',
-                            #~ 'query'     : BASE_QUERY % 'Page lookups/sec',
-                            #~ 'type'      : 'delta'
-                            #~ },
-    
-    #~ 'freepages'         : { 'help'      : 'Free Pages (Cumulative)',
-                            #~ 'stdout'    : 'Free pages is %s',
-                            #~ 'label'     : 'free_pages',
-                            #~ 'type'      : 'standard',
-                            #~ 'query'     : BASE_QUERY % 'Free pages'
-                            #~ },
-                            
-    #~ 'totalpages'        : { 'help'      : 'Total Pages (Cumulative)',
-                            #~ 'stdout'    : 'Total pages is %s',
-                            #~ 'label'     : 'totalpages',
-                            #~ 'type'      : 'standard',
-                            #~ 'query'     : BASE_QUERY % 'Total pages',
-                            #~ },
-                            
-    #~ 'targetpages'       : { 'help'      : 'Target Pages',
-                            #~ 'stdout'    : 'Target pages are %s',
-                            #~ 'label'     : 'target_pages',
-                            #~ 'type'      : 'standard',
-                            #~ 'query'     : BASE_QUERY % 'Target pages',
-                            #~ },
-                            
-    #~ 'databasepages'     : { 'help'      : 'Database Pages',
-                            #~ 'stdout'    : 'Database pages are %s',
-                            #~ 'label'     : 'database_pages',
-                            #~ 'type'      : 'standard',
-                            #~ 'query'     : BASE_QUERY % 'Database pages',
-                            #~ },
-    
-    #~ 'stolenpages'       : { 'help'      : 'Stolen Pages',
-                            #~ 'stdout'    : 'Stolen pages are %s',
-                            #~ 'label'     : 'stolen_pages',
-                            #~ 'type'      : 'standard',
-                            #~ 'query'     : BASE_QUERY % 'Stolen pages',
-                            #~ },
-    
-#    'lazywrites'        : { 'help'      : 'Lazy Writes / Sec',
-#                            'stdout'    : 'Lazy Writes / Sec is %s/sec',
-#                            'label'     : 'lazy_writes',
-#                            'query'     : BASE_QUERY % 'Lazy writes/sec',
-#                            'type'      : 'delta'
-#                            },
-    
-    #~ 'readahead'         : { 'help'      : 'Readahead Pages / Sec',
-                            #~ 'stdout'    : 'Readahead Pages / Sec is %s/sec',
-                            #~ 'label'     : 'readaheads',
-                            #~ 'query'     : BASE_QUERY % 'Readahead pages/sec',
-                            #~ 'type'      : 'delta',
-                            #~ },
-                            
-    
-    #~ 'pagereads'         : { 'help'      : 'Page Reads / Sec',
-                            #~ 'stdout'    : 'Page Reads / Sec is %s/sec',
-                            #~ 'label'     : 'page_reads',
-                            #~ 'query'     : BASE_QUERY % 'Page reads/sec',
-                            #~ 'type'      : 'delta'
-                            #~ },
-    
-    #~ 'checkpoints'       : { 'help'      : 'Checkpoint Pages / Sec',
-                            #~ 'stdout'    : 'Checkpoint Pages / Sec is %s/sec',
-                            #~ 'label'     : 'checkpoint_pages',
-                            #~ 'query'     : BASE_QUERY % 'Checkpoint pages/Sec',
-                            #~ 'type'      : 'delta'
-                            #~ },
-                            
-    
-    #~ 'pagewrites'        : { 'help'      : 'Page Writes / Sec',
-                            #~ 'stdout'    : 'Page Writes / Sec is %s/sec',
-                            #~ 'label'     : 'page_writes',
-                            #~ 'query'     : BASE_QUERY % 'Page writes/sec',
-                            #~ 'type'      : 'delta',
-                            #~ },
-    
-    #~ 'lockrequests'      : { 'help'      : 'Lock Requests / Sec',
-                            #~ 'stdout'    : 'Lock Requests / Sec is %s/sec',
-                            #~ 'label'     : 'lock_requests',
-                            #~ 'query'     : INST_QUERY % ('Lock requests/sec', '_Total'),
-                            #~ 'type'      : 'delta',
-                            #~ },
-    
-    #~ 'locktimeouts'      : { 'help'      : 'Lock Timeouts / Sec',
-                            #~ 'stdout'    : 'Lock Timeouts / Sec is %s/sec',
-                            #~ 'label'     : 'lock_timeouts',
-                            #~ 'query'     : INST_QUERY % ('Lock timeouts/sec', '_Total'),
-                            #~ 'type'      : 'delta',
-                            #~ },
-    
- #   'deadlocks'         : { 'help'      : 'Deadlocks / Sec',
- #                           'stdout'    : 'Deadlocks / Sec is %s/sec',
- #                           'label'     : 'deadlocks',
- #                           'query'     : INST_QUERY % ('Number of Deadlocks/sec', '_Total'),
- #                           'type'      : 'delta',
- #                           },
-    
- #   'lockwaits'         : { 'help'      : 'Lockwaits / Sec',
- #                           'stdout'    : 'Lockwaits / Sec is %s/sec',
- #                           'label'     : 'lockwaits',
- #                           'query'     : INST_QUERY % ('Lock Waits/sec', '_Total'),
- #                           'type'      : 'delta',
- #                           },
-    
- #   'lockwait'          : { 'help'      : 'Lock Wait Time (ms)',
- #                           'stdout'    : 'Lock Wait Time (ms) is %sms',
- #                           'label'     : 'lockwait',
- #                           'unit'      : 'ms',
- #                           'query'     : INST_QUERY % ('Lock Wait Time (ms)', '_Total'),
- #                           'type'      : 'standard',
- #                           },
-    
-#    'averagewait'       : { 'help'      : 'Average Wait Time (ms)',
-#                            'stdout'    : 'Average Wait Time (ms) is %sms',
-#                            'label'     : 'averagewait',
-#                            'unit'      : 'ms',
-#                            'query'     : DIVI_QUERY % ('Average Wait Time', '_Total'),
-#                            'type'      : 'divide',
-#                            },
-    
-#    'pagesplits'        : { 'help'      : 'Page Splits / Sec',
-#                            'stdout'    : 'Page Splits / Sec is %s/sec',
-#                            'label'     : 'page_splits',
-#                            'query'     : OBJE_QUERY % 'Page Splits/sec',
-#                            'type'      : 'delta',
-#                            },
-    
-#    'cachehit'          : { 'help'      : 'Cache Hit Ratio',
-#                            'stdout'    : 'Cache Hit Ratio is %s%%',
-#                            'label'     : 'cache_hit_ratio',
-#                            'query'     : DIVI_QUERY % ('Cache Hit Ratio', '_Total'),
-#                            'type'      : 'divide',
-#                            'unit'      : '%',
-#                            'modifier'  : 100,
-#                            },
-    
-#    'batchreq'          : { 'help'      : 'Batch Requests / Sec',
-#                            'stdout'    : 'Batch Requests / Sec is %s/sec',
-#                            'label'     : 'batch_requests',
-#                            'query'     : OBJE_QUERY % 'Batch Requests/sec',
-#                            'type'      : 'delta',
-#                            },
-    
-#    'sqlcompilations'   : { 'help'      : 'SQL Compilations / Sec',
-#                            'stdout'    : 'SQL Compilations / Sec is %s/sec',
-#                            'label'     : 'sql_compilations',
-#                            'query'     : OBJE_QUERY % 'SQL Compilations/sec',
-#                            'type'      : 'delta',
-#                            },
-    
-#    'fullscans'         : { 'help'      : 'Full Scans / Sec',
-#                            'stdout'    : 'Full Scans / Sec is %s/sec',
-#                            'label'     : 'full_scans',
-#                            'query'     : OBJE_QUERY % 'Full Scans/sec',
-#                            'type'      : 'standard',
-#                            },
-    
-#    'pagelife'          : { 'help'      : 'Page Life Expectancy',
-#                            'stdout'    : 'Page Life Expectancy is %s/sec',
-#                            'label'     : 'page_life_expectancy',
-#                            'query'     : OBJE_QUERY % 'Page life expectancy',
-#                            'type'      : 'standard'
-#                            },
-    
-    #~ 'debug'             : { 'help'      : 'Used as a debugging tool.',
-                            #~ 'stdout'    : 'Debugging: ',
-                            #~ 'label'     : 'debug',
-                            #~ 'query'     : DIVI_QUERY % ('Average Wait Time', '_Total'),
-                            #~ 'type'      : 'divide' 
-                            #~ },
-    
+ 
     'time2connect'      : { 'help'      : 'Time to connect to the database.' },
     
     'test'              : { 'help'      : 'Run tests of all queries against the database.' },
